@@ -9,6 +9,8 @@ import (
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/Snawoot/copeland"
 )
 
 const (
@@ -84,6 +86,34 @@ func run() int {
 	for _, name := range sortedNames {
 		fmt.Printf("\t%s\n", name)
 	}
+
+	cl, err := copeland.New(sortedNames)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+	fmt.Println()
+
+	for _, filename := range args {
+		if err := func() error {
+			f, err := os.Open(filename)
+			if err != nil {
+				return fmt.Errorf("unable to open file %q: %w", filename, err)
+			}
+			defer f.Close()
+			names, err := readBallot(f)
+			if err != nil {
+				return fmt.Errorf("ballot %q reading failed: %w", filename, err)
+			}
+			if err := cl.Update(names); err != nil {
+				return fmt.Errorf("file %q: Copeland update failed: %w", filename, err)
+			}
+			return nil
+		}(); err != nil {
+			log.Fatalf("error: %v", err)
+		}
+	}
+
+	cl.Dump()
 
 	return 0
 }
