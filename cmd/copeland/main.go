@@ -115,6 +115,11 @@ func run() int {
 
 	cl.Dump()
 
+	fmt.Println("Scores:")
+	for _, entry := range cl.Score(nil) {
+		fmt.Printf("\t%s\t%g\n", entry.Name, entry.Score)
+	}
+
 	return 0
 }
 

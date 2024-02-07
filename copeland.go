@@ -7,6 +7,23 @@ import (
 	"strings"
 )
 
+type Scoring struct {
+	Win  float64
+	Tie  float64
+	Loss float64
+}
+
+var DefaultScoring = &Scoring{
+	Win:  1,
+	Tie:  .5,
+	Loss: 0,
+}
+
+type ScoreEntry struct {
+	Name  string
+	Score float64
+}
+
 type Matrix struct {
 	data []int64
 	size int
@@ -55,6 +72,10 @@ func (m *Matrix) Dump() {
 		}
 		fmt.Println()
 	}
+}
+
+func (m *Matrix) Row(i int) []int64 {
+	return m.data[i*m.size : (i+1)*m.size]
 }
 
 type Copeland struct {
@@ -115,4 +136,33 @@ func (c *Copeland) Update(ballot []string) error {
 func (c *Copeland) Dump() {
 	fmt.Println(strings.Join(c.names, "\t"))
 	c.state.Dump()
+}
+
+func (c *Copeland) Score(scoring *Scoring) []ScoreEntry {
+	if scoring == nil {
+		scoring = DefaultScoring
+	}
+	size := c.state.Size()
+	res := make([]ScoreEntry, 0, size)
+	for i:=0; i<size; i++ {
+		score := float64(0)
+		for j:=0; j<size; j++ {
+			if i == j { continue }
+			runner := c.state.Get(i, j)
+			opponent := c.state.Get(j, i)
+			switch {
+			case runner > opponent:
+				score += scoring.Win
+			case runner < opponent:
+				score += scoring.Loss
+			default:
+				score += scoring.Tie
+			}
+		}
+		res = append(res, ScoreEntry{
+			Name: c.names[i],
+			Score: score,
+		})
+	}
+	return res
 }
