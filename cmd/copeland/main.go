@@ -22,6 +22,9 @@ var (
 
 	showVersion   = flag.Bool("version", false, "show program version and exit")
 	normalizeCase = flag.Bool("normalize-case", true, "normalize case")
+	scoreWin      = flag.Float64("score-win", 1, "score for win against opponent")
+	scoreTie      = flag.Float64("score-tie", .5, "score for tie against opponent")
+	scoreLoss     = flag.Float64("score-loss", 0, "score for tie against opponent")
 )
 
 func cmdVersion() int {
@@ -116,7 +119,11 @@ func run() int {
 	cl.Dump()
 
 	fmt.Println("Scores:")
-	for _, entry := range cl.Score(nil) {
+	for _, entry := range cl.Score(&copeland.Scoring{
+		Win:  *scoreWin,
+		Tie:  *scoreTie,
+		Loss: *scoreLoss,
+	}) {
 		fmt.Printf("\t%s\t%g\n", entry.Name, entry.Score)
 	}
 

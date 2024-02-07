@@ -144,10 +144,12 @@ func (c *Copeland) Score(scoring *Scoring) []ScoreEntry {
 	}
 	size := c.state.Size()
 	res := make([]ScoreEntry, 0, size)
-	for i:=0; i<size; i++ {
+	for i := 0; i < size; i++ {
 		score := float64(0)
-		for j:=0; j<size; j++ {
-			if i == j { continue }
+		for j := 0; j < size; j++ {
+			if i == j {
+				continue
+			}
 			runner := c.state.Get(i, j)
 			opponent := c.state.Get(j, i)
 			switch {
@@ -160,7 +162,7 @@ func (c *Copeland) Score(scoring *Scoring) []ScoreEntry {
 			}
 		}
 		res = append(res, ScoreEntry{
-			Name: c.names[i],
+			Name:  c.names[i],
 			Score: score,
 		})
 	}
