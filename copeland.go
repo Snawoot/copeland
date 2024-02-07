@@ -169,22 +169,17 @@ func RankScore(scores []ScoreEntry) [][]ScoreEntry {
 }
 
 func groupBy[S ~[]E, E any](s S, eq func(E, E) bool) []S {
-	return groupBy_(make([]S, 0, len(s)), s, eq)
-}
-
-func groupBy_[S ~[]E, E any](head []S, s S, eq func(E, E) bool) []S {
-	if len(s) < 2 {
-		if len(s) == 0 {
-			return head
+	var head []S
+	for len(s) > 0 {
+		key := s[0]
+		var idx int
+		for idx = 1; idx < len(s); idx++ {
+			if !eq(s[idx], key) {
+				break
+			}
 		}
-		return append(head, s)
+		head = append(head, s[0:idx])
+		s = s[idx:]
 	}
-	key := s[0]
-	idx := 0
-	for idx = 1; idx < len(s); idx++ {
-		if !eq(s[idx], key) {
-			break
-		}
-	}
-	return groupBy_(append(head, s[0:idx]), s[idx:], eq)
+	return head
 }
