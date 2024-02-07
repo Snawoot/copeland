@@ -117,12 +117,15 @@ func run() int {
 	}
 
 	fmt.Println("Scores:")
-	for _, entry := range cl.Score(&copeland.Scoring{
+	for i, rank := range copeland.RankScore(cl.Score(&copeland.Scoring{
 		Win:  *scoreWin,
 		Tie:  *scoreTie,
 		Loss: *scoreLoss,
-	}) {
-		fmt.Printf("\t%s\t%g\n", entry.Name, entry.Score)
+	})) {
+		fmt.Printf("\tRank %d:\n", i+1)
+		for _, entry := range rank {
+			fmt.Printf("\t\t%g\t%s\n", entry.Score, entry.Name)
+		}
 	}
 
 	return 0

@@ -1,6 +1,7 @@
 package copeland
 
 import (
+	"cmp"
 	"errors"
 	"slices"
 )
@@ -151,4 +152,35 @@ func (c *Copeland) Score(scoring *Scoring) []ScoreEntry {
 		})
 	}
 	return res
+}
+
+func CmpScoreEntry(a, b ScoreEntry) int {
+	if n := cmp.Compare(b.Score, a.Score); n != 0 {
+		return n
+	}
+	return cmp.Compare(a.Name, b.Name)
+}
+
+func RankScore(scores []ScoreEntry) [][]ScoreEntry {
+	copied := make([]ScoreEntry, len(scores))
+	copy(copied, scores)
+	slices.SortFunc(copied, CmpScoreEntry)
+	return groupBy(copied, func(a, b ScoreEntry) bool { return a.Score == b.Score })
+}
+
+func groupBy[S ~[]E, E any](s S, eq func(E, E) bool) []S {
+	if len(s) < 2 {
+		if len(s) == 0 {
+			return []S{}
+		}
+		return []S{s}
+	}
+	key := s[0]
+	idx := 0
+	for idx = 1; idx < len(s); idx++ {
+		if !eq(s[idx], key) {
+			break
+		}
+	}
+	return append([]S{s[0:idx]}, groupBy(s[idx:], eq)...)
 }
