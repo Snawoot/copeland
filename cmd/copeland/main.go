@@ -116,8 +116,6 @@ func run() int {
 		}
 	}
 
-	cl.Dump()
-
 	fmt.Println("Scores:")
 	for _, entry := range cl.Score(&copeland.Scoring{
 		Win:  *scoreWin,

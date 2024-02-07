@@ -2,9 +2,7 @@ package copeland
 
 import (
 	"errors"
-	"fmt"
 	"slices"
-	"strings"
 )
 
 type Scoring struct {
@@ -65,15 +63,6 @@ func (m *Matrix) Inc(i, j int) {
 	m.data[i*m.size+j]++
 }
 
-func (m *Matrix) Dump() {
-	for i := 0; i < m.size; i++ {
-		for j := 0; j < m.size; j++ {
-			fmt.Printf("%d\t", m.Get(i, j))
-		}
-		fmt.Println()
-	}
-}
-
 func (m *Matrix) Row(i int) []int64 {
 	return m.data[i*m.size : (i+1)*m.size]
 }
@@ -131,11 +120,6 @@ func (c *Copeland) Update(ballot []string) error {
 	}
 	c.state.Add(c.ballotToMatrix(ballot))
 	return nil
-}
-
-func (c *Copeland) Dump() {
-	fmt.Println(strings.Join(c.names, "\t"))
-	c.state.Dump()
 }
 
 func (c *Copeland) Score(scoring *Scoring) []ScoreEntry {
