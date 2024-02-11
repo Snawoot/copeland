@@ -25,6 +25,7 @@ var (
 	scoreWin      = flag.Float64("score-win", 1, "score for win against opponent")
 	scoreTie      = flag.Float64("score-tie", .5, "score for tie against opponent")
 	scoreLoss     = flag.Float64("score-loss", 0, "score for tie against opponent")
+	names         = flag.String("names", "", "filename of list of names in the voting. If not specified names inferred from first ballot")
 )
 
 func cmdVersion() int {
@@ -60,24 +61,26 @@ func run() int {
 	}
 
 	uniqNames := make(map[string]struct{})
-	for _, filename := range args {
-		if err := func() error {
-			f, err := os.Open(filename)
-			if err != nil {
-				return fmt.Errorf("unable to open file %q: %w", filename, err)
-			}
-			defer f.Close()
-			names, err := readBallot(f)
-			if err != nil {
-				return fmt.Errorf("ballot %q reading failed: %w", filename, err)
-			}
-			for _, name := range names {
-				uniqNames[name] = struct{}{}
-			}
-			return nil
-		}(); err != nil {
-			log.Fatalf("error: %v", err)
+	nameListFilename := args[0]
+	if *names != "" {
+		nameListFilename = *names
+	}
+	if err := func() error {
+		f, err := os.Open(nameListFilename)
+		if err != nil {
+			return fmt.Errorf("unable to open file %q: %w", nameListFilename, err)
 		}
+		defer f.Close()
+		names, err := readBallot(f)
+		if err != nil {
+			return fmt.Errorf("ballot %q reading failed: %w", nameListFilename, err)
+		}
+		for _, name := range names {
+			uniqNames[name] = struct{}{}
+		}
+		return nil
+	}(); err != nil {
+		log.Fatalf("error: %v", err)
 	}
 
 	sortedNames := make([]string, 0, len(uniqNames))
