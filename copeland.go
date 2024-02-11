@@ -3,6 +3,7 @@ package copeland
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"slices"
 )
 
@@ -91,35 +92,87 @@ func (c *Copeland) nameToIndex(name string) (int, bool) {
 	return slices.BinarySearch(c.names, name)
 }
 
-func (c *Copeland) ballotToMatrix(ballot []string) *Matrix {
-	mapped := make([]int, len(ballot))
+var ErrIncorrectLength = errors.New("incorrect number of items in ballot list")
+
+type UnknownNameError string
+
+func (e UnknownNameError) Error() string {
+	return fmt.Sprintf("unknown name \"%s\" in ballot", string(e))
+}
+
+func (e UnknownNameError) Name() string {
+	return string(e)
+}
+
+type MissingNameError string
+
+func (e MissingNameError) Error() string {
+	return fmt.Sprintf("missing name \"%s\" in ballot", string(e))
+}
+
+func (e MissingNameError) Name() string {
+	return string(e)
+}
+
+type DuplicateNameError struct {
+	name  string
+	count int
+}
+
+func (e DuplicateNameError) Error() string {
+	return fmt.Sprintf("name \"%s\" appears %d times in ballot", e.name, e.count)
+}
+
+func (e DuplicateNameError) Name() string {
+	return e.name
+}
+
+func (e DuplicateNameError) Count() int {
+	return e.count
+}
+
+func (c *Copeland) ballotToMatrix(ballot []string) (*Matrix, error) {
+	size := len(c.names)
+	if len(ballot) != size {
+		return nil, ErrIncorrectLength
+	}
+	mapped := make([]int, size)
+	counts := make([]int, size)
 	for i, name := range ballot {
 		mappedName, ok := c.nameToIndex(name)
 		if !ok {
-			panic("unexpected condition: validated ballot has non-mapable name")
+			return nil, UnknownNameError(name)
 		}
 		mapped[i] = mappedName
+		counts[mappedName]++
 	}
-	m := NewMatrix(len(ballot))
+	for i, count := range counts {
+		switch count {
+		case 0:
+			return nil, MissingNameError(c.names[i])
+		case 1:
+		default:
+			return nil, DuplicateNameError{
+				name:  c.names[i],
+				count: count,
+			}
+		}
+	}
+	m := NewMatrix(size)
 	for base, winner := range mapped {
 		for _, loser := range mapped[base+1:] {
 			m.Inc(winner, loser)
 		}
 	}
-	return m
+	return m, nil
 }
 
 func (c *Copeland) Update(ballot []string) error {
-	if len(ballot) != len(c.names) {
-		return errors.New("incorrect ballot length")
+	matrix, err := c.ballotToMatrix(ballot)
+	if err != nil {
+		return fmt.Errorf("state update failed: %w", err)
 	}
-	copied := make([]string, len(ballot))
-	copy(copied, ballot)
-	slices.Sort(copied)
-	if !slices.Equal(copied, c.names) {
-		return errors.New("invalid ballot")
-	}
-	c.state.Add(c.ballotToMatrix(ballot))
+	c.state.Add(matrix)
 	return nil
 }
 
