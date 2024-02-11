@@ -71,7 +71,7 @@ Note: candidate which scored against every other candidate (having score *N-1* w
 $ copeland -h
 Usage:
 
-copeland [OPTION]... [BALLOT FILE]...
+copeland [OPTION]... [BALLOT FILE OR DIRECTORY]...
 
   Process files with preference lists and output Copeland's ranking.
 
@@ -86,6 +86,8 @@ Options:
     	score for tie against opponent (default 0.5)
   -score-win float
     	score for win against opponent (default 1)
+  -skip-errors
+    	skip ballot errors, but still report them
   -version
     	show program version and exit
 ```
