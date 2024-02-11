@@ -76,6 +76,8 @@ copeland [OPTION]... [BALLOT FILE]...
   Process files with preference lists and output Copeland's ranking.
 
 Options:
+  -names string
+    	filename of list of names in the voting. If not specified names inferred from first ballot
   -normalize-case
     	normalize case (default true)
   -score-loss float
