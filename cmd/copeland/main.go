@@ -26,6 +26,7 @@ var (
 	scoreTie      = flag.Float64("score-tie", .5, "score for tie against opponent")
 	scoreLoss     = flag.Float64("score-loss", 0, "score for tie against opponent")
 	names         = flag.String("names", "", "filename of list of names in the voting. If not specified names inferred from first ballot")
+	skipErrors    = flag.Bool("skip-errors", false, "skip errors, but still report them")
 )
 
 func cmdVersion() int {
@@ -115,7 +116,10 @@ func run() int {
 			}
 			return nil
 		}(); err != nil {
-			log.Fatalf("error: %v", err)
+			log.Printf("error: %v", err)
+			if !*skipErrors {
+				return 1
+			}
 		}
 	}
 
@@ -154,5 +158,7 @@ func readBallot(input io.Reader) ([]string, error) {
 }
 
 func main() {
+	log.Default().SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	log.Default().SetPrefix(strings.ToUpper(ProgName) + ": ")
 	os.Exit(run())
 }
