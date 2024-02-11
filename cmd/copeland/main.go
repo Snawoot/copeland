@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -26,7 +29,7 @@ var (
 	scoreTie      = flag.Float64("score-tie", .5, "score for tie against opponent")
 	scoreLoss     = flag.Float64("score-loss", 0, "score for tie against opponent")
 	names         = flag.String("names", "", "filename of list of names in the voting. If not specified names inferred from first ballot")
-	skipErrors    = flag.Bool("skip-errors", false, "skip errors, but still report them")
+	skipErrors    = flag.Bool("skip-errors", false, "skip ballot errors, but still report them")
 )
 
 func cmdVersion() int {
@@ -38,7 +41,7 @@ func usage() {
 	out := flag.CommandLine.Output()
 	fmt.Fprintln(out, "Usage:")
 	fmt.Fprintln(out)
-	fmt.Fprintf(out, "%s [OPTION]... [BALLOT FILE]...\n", ProgName)
+	fmt.Fprintf(out, "%s [OPTION]... [BALLOT FILE OR DIRECTORY]...\n", ProgName)
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "  Process files with preference lists and output Copeland's ranking.")
 	fmt.Fprintln(out)
@@ -62,9 +65,15 @@ func run() int {
 	}
 
 	uniqNames := make(map[string]struct{})
-	nameListFilename := args[0]
+	var nameListFilename string
+	var err error
 	if *names != "" {
 		nameListFilename = *names
+	} else {
+		nameListFilename, err = getFirstFilename(args)
+		if err != nil {
+			log.Fatalf("unable to get first filename: %v", err)
+		}
 	}
 	if err := func() error {
 		f, err := os.Open(nameListFilename)
@@ -100,27 +109,26 @@ func run() int {
 	}
 	fmt.Println()
 
-	for _, filename := range args {
-		if err := func() error {
-			f, err := os.Open(filename)
-			if err != nil {
-				return fmt.Errorf("unable to open file %q: %w", filename, err)
-			}
-			defer f.Close()
-			names, err := readBallot(f)
-			if err != nil {
-				return fmt.Errorf("ballot %q reading failed: %w", filename, err)
-			}
-			if err := cl.Update(names); err != nil {
-				return fmt.Errorf("file %q: Copeland update failed: %w", filename, err)
-			}
-			return nil
-		}(); err != nil {
-			log.Printf("error: %v", err)
-			if !*skipErrors {
-				return 1
-			}
+	if err := walkFiles(args, func(filename string) error {
+		f, err := os.Open(filename)
+		if err != nil {
+			return fmt.Errorf("unable to open file %q: %w", filename, err)
 		}
+		defer f.Close()
+		names, err := readBallot(f)
+		if err != nil {
+			return fmt.Errorf("ballot %q reading failed: %w", filename, err)
+		}
+		if err := cl.Update(names); err != nil {
+			if *skipErrors {
+				log.Printf("file %q: Copeland update failed: %v", filename, err)
+				return nil
+			}
+			return fmt.Errorf("file %q: Copeland update failed: %w", filename, err)
+		}
+		return nil
+	}); err != nil {
+		log.Fatalf("file walk failed: %v", err)
 	}
 
 	fmt.Println("Scores:")
@@ -155,6 +163,44 @@ func readBallot(input io.Reader) ([]string, error) {
 		return nil, fmt.Errorf("line scanning failed: %w", err)
 	}
 	return res, nil
+}
+
+func getFirstFilename(args []string) (string, error) {
+	var res string
+	for _, root := range args {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.Type().IsRegular() {
+				res = path
+				return fs.SkipAll
+			}
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+		if res != "" {
+			return res, nil
+		}
+	}
+	return "", errors.New("no files were found!")
+}
+
+func walkFiles(args []string, f func(path string) error) error {
+	for _, root := range args {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if d.Type().IsRegular() {
+				return f(path)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func main() {
