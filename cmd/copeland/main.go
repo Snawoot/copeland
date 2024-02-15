@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/Snawoot/copeland"
+	"golang.org/x/text/unicode/norm"
 )
 
 const (
@@ -23,13 +24,14 @@ const (
 var (
 	version = "undefined"
 
-	showVersion   = flag.Bool("version", false, "show program version and exit")
-	normalizeCase = flag.Bool("normalize-case", true, "normalize case")
-	scoreWin      = flag.Float64("score-win", 1, "score for win against opponent")
-	scoreTie      = flag.Float64("score-tie", .5, "score for tie against opponent")
-	scoreLoss     = flag.Float64("score-loss", 0, "score for tie against opponent")
-	names         = flag.String("names", "", "filename of list of names in the voting. If not specified names inferred from first ballot")
-	skipErrors    = flag.Bool("skip-errors", false, "skip ballot errors, but still report them")
+	showVersion      = flag.Bool("version", false, "show program version and exit")
+	normalizeCase    = flag.Bool("normalize-case", true, "normalize case")
+	normalizeUnicode = flag.Bool("normalize-unicode", true, "normalize unicode characters")
+	scoreWin         = flag.Float64("score-win", 1, "score for win against opponent")
+	scoreTie         = flag.Float64("score-tie", .5, "score for tie against opponent")
+	scoreLoss        = flag.Float64("score-loss", 0, "score for tie against opponent")
+	names            = flag.String("names", "", "filename of list of names in the voting. If not specified names inferred from first ballot")
+	skipErrors       = flag.Bool("skip-errors", false, "skip ballot errors, but still report them")
 )
 
 func cmdVersion() int {
@@ -153,6 +155,9 @@ func readBallot(input io.Reader) ([]string, error) {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
+		}
+		if normalizeUnicode != nil && *normalizeUnicode {
+			line = norm.NFKC.String(line)
 		}
 		if normalizeCase != nil && *normalizeCase {
 			line = strings.ToUpper(line)
